@@ -1,5 +1,5 @@
 import streamlit as st
-import gemini_helper2
+import gemini__helper
 import pandas as pd
 
 st.set_page_config(page_title="Financial Data App", layout="centered")
@@ -86,7 +86,7 @@ if st.session_state.page == 'extract_text':
                 st.warning("No financial metrics found in the article.")
                 ticker = st.text_input("Enter company ticker symbol to fetch live financials as fallback:")
                 if ticker:
-                    live_df = gemini_helper2.get_live_financials(ticker)
+                    live_df = gemini__helper.get_live_financials(ticker)
                     st.info("Live financial data from Yahoo Finance:")
                     st.dataframe(live_df, use_container_width=True)
 
@@ -97,7 +97,7 @@ elif st.session_state.page == 'live_data':
         if not ticker_input.strip():
             st.warning("Please enter a ticker symbol.")
         else:
-            live_df = gemini_helper2.get_live_financials(ticker_input.strip())
+            live_df = gemini__helper.get_live_financials(ticker_input.strip())
             st.dataframe(live_df, use_container_width=True)
             values = live_df.set_index("Measure")["Value"]
             company_name = values.get("Company Name", "")
@@ -106,7 +106,7 @@ elif st.session_state.page == 'live_data':
             eps = values.get("EPS", "")
 
             if all([company_name, revenue, net_income, eps]):
-                summary = gemini_helper2.generate_insight(company_name, revenue, net_income, eps)
+                summary = gemini__helper.generate_insight(company_name, revenue, net_income, eps)
                 st.markdown("Financial Summary:")
                 st.markdown(f"<div style='background-color:#f1f1f1; padding:15px; border-radius:10px; color:#333;'>{summary}</div>", unsafe_allow_html=True)
 
