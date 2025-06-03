@@ -78,7 +78,7 @@ if st.session_state.page == 'extract_text':
         if not article.strip():
             st.warning("Please enter some financial text to extract data.")
         else:
-            df = gemini_helper2.extract_financial_data(article)
+            df = gemini__helper.extract_financial_data(article)
             if df is not None and not df.empty:
                 st.success("Financial data extracted from the article:")
                 st.dataframe(df, use_container_width=True)
