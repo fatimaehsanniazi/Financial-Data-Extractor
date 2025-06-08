@@ -1,7 +1,6 @@
 import google.generativeai as genai
 import json
 import pandas as pd
-import re
 import yfinance as yf
 from key import skey
 
@@ -27,46 +26,27 @@ News Article:
 ============
 """
 
-def extract_financial_data(text):
-    prompt = prompt_financial + text
-    response = model.generate_content(prompt)
-    content = response.text
-    print("Raw model response:\n", content)
-
+def extract_financial_data(request):
     try:
-        match = re.search(r'\{[\s\S]*?\}', content)
-        if match:
-            json_str = match.group(0)
-            data = json.loads(json_str)
-            # Check if all financial fields are empty strings
-            if all(value == "" for key, value in data.items() if key != "Company Name" and key != "Stock Symbol"):
-                print("No financial metrics found in the article, returning empty DataFrame.")
-                return None  # indicate no financial data found
-            return pd.DataFrame(data.items(), columns=["Measure", "Value"])
-    except (json.JSONDecodeError, IndexError):
-        pass
+        prompt_final=prompt_financial+request
+        response=model.generate_content(prompt_final)
+        # cleaning the reponse to remove extra characters
+        response_text=response.text.strip().strip("```json").strip("```").strip()
+        reponse_df=json.loads(response_text)
+        df=pd.DataFrame(list(reponse_df.items()), columns=["Measures", "Values"])
+        return df
+    except (json.JSONDecodeError, IndexError, AttributeError):
+        return pd.DataFrame(columns=["Measures", "Values"])
 
-    return None  # fallback None for no data
-
+    
 def get_live_financials(ticker):
     try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-
+        stock=yf.Ticker(ticker)
+        info=stock.info
         company_name = info.get("longName", "")
         revenue = info.get("totalRevenue", "")
         net_income = info.get("netIncomeToCommon", "")
         eps = info.get("trailingEps", "")
-
-        def format_money(val):
-            if isinstance(val, (int, float)):
-                if val > 1e9:
-                    return f"${val/1e9:.2f}B"
-                elif val > 1e6:
-                    return f"${val/1e6:.2f}M"
-                else:
-                    return f"${val:.2f}"
-            return ""
 
         return pd.DataFrame({
             "Measure": ["Company Name", "Stock Symbol", "Revenue", "Net Income", "EPS"],
@@ -114,14 +94,23 @@ def generate_insight(company, revenue, income, eps):
     response = model.generate_content(prompt)
     return response.text.strip()
 
+def format_money(val):
+    try:
+        val = float(val)
+        if val >= 1e9:
+            return f"${val / 1e9:.2f}B"
+        elif val >= 1e6:
+            return f"${val / 1e6:.2f}M"
+        return f"${val:.2f}"
+    except (ValueError, TypeError):
+        return ""
+    
 if __name__ == "__main__":
     article_text = input("Paste a financial news article:\n")
-
-    if article_text.strip():
-        df = extract_financial_data(article_text)
-        if df is not None:
-            print("\nExtracted financial data from article:")
-            print(df)
+    df = extract_financial_data(article_text)
+    if df is not None:
+        print("\nExtracted financial data from article:")
+        print(df)
     else:
         ticker = input("Enter company ticker symbol to fetch live financials: ")
         live_df = get_live_financials(ticker)
